@@ -1,0 +1,4 @@
+# Fichiers generes par la machine locale : ne JAMAIS les publier.
+# Ils contiennent des donnees de la machine (IP, processus, commandes).
+logs/
+serveur.pid

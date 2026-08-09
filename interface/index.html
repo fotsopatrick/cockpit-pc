@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cockpit PC — Tour de contrôle</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="bandeau">
+  <div class="titre">
+    <div class="logo">&#9671;</div>
+    <div>
+      <h1>Cockpit PC</h1>
+      <div class="sous-titre" id="sousTitre">connexion au serveur…</div>
+    </div>
+  </div>
+  <div class="voyants" id="voyants"></div>
+  <div class="horloge" id="horloge">--:--:--</div>
+</header>
+
+<div class="bandeaux">
+  <div class="boite stat" id="stCpu"><div class="label">CPU</div><div class="valeur">–</div><div class="barre"><div class="remplissage" id="barCpu"></div></div></div>
+  <div class="boite stat" id="stRam"><div class="label">RAM</div><div class="valeur">–</div><div class="barre"><div class="remplissage" id="barRam"></div></div></div>
+  <div class="boite stat" id="stDisq"><div class="label">DISQUE</div><div class="valeur">–</div><div class="barre"><div class="remplissage" id="barDisq"></div></div></div>
+  <div class="boite stat" id="stSvc"><div class="label">SERVICES ACTIFS</div><div class="valeur">–</div></div>
+  <div class="boite stat" id="stConx"><div class="label">CONNEXIONS</div><div class="valeur">–</div></div>
+  <div class="boite stat" id="stPorts"><div class="label">PORTS OUVERTS</div><div class="valeur">–</div></div>
+</div>
+
+<nav class="onglets">
+  <button class="onglet actif" data-panel="panResume">Vue d'ensemble</button>
+  <button class="onglet" data-panel="panReseau">Réseau</button>
+  <button class="onglet" data-panel="panServices">Services &amp; tâches</button>
+  <button class="onglet" data-panel="panSysteme">Système</button>
+  <button class="onglet" data-panel="panLogs">Journal</button>
+</nav>
+
+<main>
+  <!-- VUE D'ENSEMBLE -->
+  <section id="panResume" class="panneau actif">
+    <div class="grille-cartes">
+      <div class="carte">
+        <h3>Nouveaux services depuis le 01/08</h3>
+        <div id="resNouveauxServices" class="liste-lignes"></div>
+      </div>
+      <div class="carte">
+        <h3>Logiciels installés récemment</h3>
+        <div id="resLogiciels" class="liste-lignes"></div>
+      </div>
+      <div class="carte">
+        <h3>Erreurs système (24 h)</h3>
+        <div id="resErreurs" class="liste-lignes"></div>
+      </div>
+      <div class="carte">
+        <h3>Processus les plus actifs</h3>
+        <div id="resProcessus" class="liste-lignes"></div>
+      </div>
+    </div>
+
+    <div class="carte">
+      <h3>Connexions sortantes fréquentes</h3>
+      <div id="resFrequences" class="liste-lignes"></div>
+    </div>
+    <div class="carte">
+      <h3>Connexions entrantes fréquentes (vers cette machine)</h3>
+      <div id="resFrequencesEntrantes" class="liste-lignes"></div>
+    </div>
+  </section>
+
+  <!-- RESEAU -->
+  <section id="panReseau" class="panneau">
+    <div class="carte">
+      <h3>Connexions établies vers l'extérieur</h3>
+      <div class="recherche"><input id="chConn" type="text" placeholder="Filtrer les connexions (processus, IP, port)…"></div>
+      <div id="resConnexions" class="table-wrap"></div>
+    </div>
+    <div class="carte">
+      <h3>Connexions entrantes vers cette machine</h3>
+      <div class="recherche"><input id="chEntrantes" type="text" placeholder="Filtrer les connexions entrantes (processus, IP, port)…"></div>
+      <div id="resConnexionsEntrantes" class="table-wrap"></div>
+    </div>
+    <div class="carte">
+      <h3>Ports en écoute</h3>
+      <div id="resPorts" class="table-wrap"></div>
+    </div>
+  </section>
+
+  <!-- SERVICES & TACHES -->
+  <section id="panServices" class="panneau">
+    <div class="carte">
+      <h3>Services Windows</h3>
+      <div class="recherche"><input id="chSvc" type="text" placeholder="Filtrer les services…"></div>
+      <div id="resServices" class="table-wrap"></div>
+    </div>
+    <div class="carte">
+      <h3>Tâches planifiées</h3>
+      <div class="recherche"><input id="chTaches" type="text" placeholder="Filtrer les tâches…"></div>
+      <div id="resTaches" class="table-wrap"></div>
+    </div>
+  </section>
+
+  <!-- SYSTEME -->
+  <section id="panSysteme" class="panneau">
+    <div class="grille-cartes">
+      <div class="carte">
+        <h3>Démarrage automatique</h3>
+        <div id="resAutostart" class="liste-lignes"></div>
+      </div>
+      <div class="carte">
+        <h3>Machine</h3>
+        <div id="resMachine" class="liste-lignes"></div>
+      </div>
+      <div class="carte">
+        <h3>Disques</h3>
+        <div id="resDisques" class="liste-lignes"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- JOURNAL -->
+  <section id="panLogs" class="panneau">
+    <div class="carte">
+      <h3>Journal de la machine</h3>
+      <p class="note">Chaque nouvelle connexion sortante et chaque nouvelle fenêtre de terminal est consignée ici avec l'heure. Une fenêtre qui s'ouvre et se ferme toute seule apparaîtra dans cette liste.</p>
+      <div class="recherche"><input id="chLogs" type="text" placeholder="Rechercher dans le journal (processus, IP, commande)…"></div>
+      <div id="resLogs" class="table-wrap"></div>
+    </div>
+  </section>
+</main>
+
+<footer class="pied">
+  <span id="etatServeur">serveur : en attente</span>
+  <span id="derniereMaj"></span>
+  <button id="btnArret" class="petit">Arrêter le serveur</button>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
