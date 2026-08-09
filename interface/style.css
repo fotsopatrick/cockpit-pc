@@ -205,6 +205,16 @@ tbody tr:hover { background: #1a2231; }
   cursor: pointer;
 }
 .petit:hover { background: rgba(244, 106, 106, .1); }
+.petit-violet {
+  background: transparent;
+  border: 1px solid var(--violet);
+  color: var(--violet);
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.petit-violet:hover { background: rgba(139, 124, 246, .12); }
+.note-pied { font-size: 11px; color: var(--att); }
 
 .vide { color: var(--att); font-style: italic; padding: 8px; }
 

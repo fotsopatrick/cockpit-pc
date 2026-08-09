@@ -35,6 +35,45 @@
     $("etatServeur").textContent = "serveur : arrêté";
   });
 
+  // --- demarrage automatique (service) ---
+  let serviceActif = null;
+  $("btnService").addEventListener("click", async () => {
+    const action = serviceActif ? "desactiver" : "activer";
+    try {
+      const r = await fetch("/api/service/" + action, { method: "POST" });
+      const d = await r.json();
+      if (d.erreur) { alert("Erreur : " + d.erreur); return; }
+      serviceActif = d.actif;
+      rendreService();
+      alert(serviceActif ? "Démarrage automatique activé : le cockpit se lancera avec Windows." : "Démarrage automatique désactivé.");
+    } catch (e) {
+      alert("Impossible de joindre le serveur pour ce réglage.");
+    }
+  });
+
+  function rendreService() {
+    const b = $("btnService");
+    const t = $("etatService");
+    if (serviceActif === null) { t.textContent = "démarrage auto : ?"; return; }
+    if (serviceActif) {
+      t.textContent = "démarrage auto : ACTIF";
+      b.textContent = "Désactiver le démarrage auto";
+    } else {
+      t.textContent = "démarrage auto : inactif";
+      b.textContent = "Activer le démarrage auto";
+    }
+  }
+
+  async function majService() {
+    try {
+      const r = await fetch("/api/service", { cache: "no-store" });
+      if (!r.ok) return;
+      const d = await r.json();
+      serviceActif = d.actif;
+      rendreService();
+    } catch (e) {}
+  }
+
   // --- echappement ---
   const esc = (s) => {
     if (s === null || s === undefined) return "";
@@ -262,5 +301,6 @@
   }
 
   maj();
+  majService();
   setInterval(maj, 6000);
 })();

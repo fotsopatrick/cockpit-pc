@@ -605,6 +605,39 @@ function Arreter-Serveur {
 }
 
 # ---------------------------------------------------------------------------
+# Service : demarrage automatique avec Windows
+# ---------------------------------------------------------------------------
+$script:NomTache = 'CockpitPC'
+
+function Get-ServiceEtat {
+    $t = Get-ScheduledTask -TaskName $script:NomTache -ErrorAction SilentlyContinue
+    return @{
+        actif = [bool]$t
+        nom = $script:NomTache
+        demarrage = if ($t) { $t.State.ToString() } else { 'absent' }
+    }
+}
+
+function Activer-Service {
+    $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$($script:Dossier)\serveur.ps1`""
+    # LogonTrigger (a la connexion de l'utilisateur) : fonctionne SANS droits
+    # administrateur. AtStartup (au demarrage Windows) exigerait une elevation
+    # unique pour creer la tache — on garde le logon, plus simple et sans admin.
+    $trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
+    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -ExecutionTimeLimit ([TimeSpan]::Zero)
+    Register-ScheduledTask -TaskName $script:NomTache -Action $action -Trigger $trigger -Settings $settings -Description 'Cockpit PC : tableau de bord local de la machine' -Force -ErrorAction Stop | Out-Null
+    return (Get-ServiceEtat)
+}
+
+function Desactiver-Service {
+    $t = Get-ScheduledTask -TaskName $script:NomTache -ErrorAction SilentlyContinue
+    if ($t) {
+        Unregister-ScheduledTask -TaskName $script:NomTache -Confirm:$false -ErrorAction Stop | Out-Null
+    }
+    return (Get-ServiceEtat)
+}
+
+# ---------------------------------------------------------------------------
 # Boucle principale
 # ---------------------------------------------------------------------------
 function Main {
@@ -648,6 +681,17 @@ function Main {
                     Repondre-Json $ctx @{ ok = $true }
                     Arreter-Serveur
                     return
+                }
+                '^/api/service$' {
+                    Repondre-Json $ctx (Get-ServiceEtat)
+                }
+                '^/api/service/activer$' {
+                    try { Repondre-Json $ctx (Activer-Service) }
+                    catch { Repondre-Json $ctx @{ erreur = $_.Exception.Message } 500 }
+                }
+                '^/api/service/desactiver$' {
+                    try { Repondre-Json $ctx (Desactiver-Service) }
+                    catch { Repondre-Json $ctx @{ erreur = $_.Exception.Message } 500 }
                 }
                 '^/api/raccourci$' {
                     Repondre-Json $ctx @{ ok = $true }
