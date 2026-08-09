@@ -2,3 +2,4 @@
 # Ils contiennent des donnees de la machine (IP, processus, commandes).
 logs/
 serveur.pid
+capture-cockpit.png
