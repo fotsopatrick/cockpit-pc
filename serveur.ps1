@@ -28,12 +28,35 @@ function Log-Evenement([string]$fich, [object]$obj) {
     try {
         $ligne = $obj | ConvertTo-Json -Compress -Depth 6
         Add-Content -Path $fich -Value $ligne -Encoding UTF8
-        # on ne laisse pas grossir le journal sans fin
+        # copie en memoire pour l'affichage instantane (l'historique complet reste sur disque)
+        $script:JournalMemoire += $obj
+        if ($script:JournalMemoire.Count -gt 20000) {
+            $script:JournalMemoire = $script:JournalMemoire | Select-Object -Skip ($script:JournalMemoire.Count - 15000)
+        }
+        # on archive au lieu de supprimer : rien ne doit disparaitre
         $nb = (Get-Content $fich -ErrorAction SilentlyContinue | Measure-Object -Line).Lines
         if ($nb -gt 30000) {
-            Get-Content $fich | Select-Object -Skip ($nb - 15000) | Set-Content $fich -Encoding UTF8
+            $lignes = Get-Content $fich
+            $garder = $lignes | Select-Object -Skip ($nb - 15000)
+            $archiver = $lignes | Select-Object -First ($nb - 15000)
+            Set-Content $fich -Value $garder -Encoding UTF8
+            if ($archiver) { Add-Content "$fich.archives" -Value $archiver -Encoding UTF8 }
         }
     } catch { }
+}
+
+function Charger-JournalMemoire {
+    # au demarrage : reprendre la fin de chaque journal pour que l'affichage
+    # des 3 derniers jours survive a un redemarrage. Le reste reste sur disque.
+    foreach ($fich in @($script:FichReseau, $script:FichEntree, $script:FichTerm)) {
+        if (-not (Test-Path $fich)) { continue }
+        foreach ($l in (Get-Content $fich -Tail 5000 -ErrorAction SilentlyContinue)) {
+            try { $script:JournalMemoire += ($l | ConvertFrom-Json) } catch { }
+        }
+    }
+    if ($script:JournalMemoire.Count -gt 20000) {
+        $script:JournalMemoire = $script:JournalMemoire | Select-Object -Skip ($script:JournalMemoire.Count - 15000)
+    }
 }
 
 # ---------------------------------------------------------------------------
@@ -56,6 +79,7 @@ $script:HeureDemarrage = Get-Date
 $script:SnapshotServices = $null
 $script:ErreursWindows = $null
 $script:ErreursWindowsLe = $null
+$script:JournalMemoire = @()  # derniers evenements (affichage), historique complet sur disque
 
 function Resolve-Hote([string]$ip) {
     if (-not $ip -or $ip -match '^(127\.|0\.0\.0\.0|::|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)') { return $null }
@@ -499,16 +523,14 @@ function Verifier-ServicesChanges {
 # ---------------------------------------------------------------------------
 # Toutes les donnees d'un coup pour l'interface
 # ---------------------------------------------------------------------------
+function Lire-JournalMemoire([int]$jours = 3) {
+    # filtre l'affichage sur les N derniers jours. Tout est conserve sur disque.
+    $seuil = (Get-Date).AddDays(-$jours).ToString('yyyy-MM-dd HH:mm:ss')
+    return @($script:JournalMemoire | Where-Object { $_.date -and $_.date -ge $seuil } | Sort-Object date -Descending)
+}
+
 function Get-VueComplete {
-    $listeLogs = @()
-    if (Test-Path $script:FichReseau) { $listeLogs += (Get-Content $script:FichReseau | Select-Object -Last 500) }
-    if (Test-Path $script:FichEntree) { $listeLogs += (Get-Content $script:FichEntree | Select-Object -Last 300) }
-    if (Test-Path $script:FichTerm)   { $listeLogs += (Get-Content $script:FichTerm   | Select-Object -Last 300) }
-    $logs = @()
-    foreach ($l in $listeLogs) {
-        try { $logs += ($l | ConvertFrom-Json) } catch { }
-    }
-    $logs = $logs | Sort-Object date -Descending | Select-Object -First 500
+    $logs = Lire-JournalMemoire 3 | Select-Object -First 800
 
     $freq = @()
     foreach ($kv in $script:FreqConnexions.GetEnumerator()) {
@@ -644,6 +666,7 @@ function Main {
     Set-Content -Path $script:FichPid -Value $PID -Encoding UTF8
     Ecrire-Log "demarrage (pid $PID, port $($script:Port))"
     Init-SnapshotServices
+    Charger-JournalMemoire
 
     $script:Ecoute = New-Object System.Net.HttpListener
     $script:Ecoute.Prefixes.Add("http://127.0.0.1:$($script:Port)/")
